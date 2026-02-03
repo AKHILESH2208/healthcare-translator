@@ -3,7 +3,6 @@
 import { useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { FileText, X, Loader2, ClipboardCopy } from 'lucide-react';
 import { MedicalSummary } from '@/types';
@@ -63,7 +62,7 @@ ${summary.followUpActions.length > 0 ? summary.followUpActions.map(a => `• ${a
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
         <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 flex-shrink-0">
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -76,15 +75,14 @@ ${summary.followUpActions.length > 0 ? summary.followUpActions.map(a => `• ${a
 
         <Separator />
 
-        <CardContent className="flex-1 overflow-hidden pt-4 min-h-0">
+        <CardContent className="flex-1 overflow-y-auto pt-4">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="ml-2 text-muted-foreground">Generating summary...</p>
             </div>
           ) : summary ? (
-            <ScrollArea className="h-[calc(85vh-180px)] pr-4">
-              <div className="space-y-6 pb-4">
+            <div className="space-y-6 pb-4 pr-2">
                 {/* Summary Metadata */}
                 <div className="text-sm text-muted-foreground">
                   <p>Generated: {new Date(summary.timestamp).toLocaleString()}</p>
@@ -157,9 +155,8 @@ ${summary.followUpActions.length > 0 ? summary.followUpActions.map(a => `• ${a
                   )}
                 </div>
               </div>
-            </ScrollArea>
           ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
               <p>No summary available</p>
             </div>
           )}
