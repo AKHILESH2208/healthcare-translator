@@ -36,7 +36,16 @@ import {
 
 export function ChatInterface() {
   const [currentRole, setCurrentRole] = useState<SenderRole>('doctor');
-  const [patientLanguage, setPatientLanguage] = useState<LanguageCode>(DEFAULT_PATIENT_LANGUAGE);
+  const [patientLanguage, setPatientLanguage] = useState<LanguageCode>(() => {
+    // Load saved language from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('patientLanguage');
+      if (saved && ['en', 'es', 'hi', 'fr', 'de', 'pt', 'zh', 'ar'].includes(saved)) {
+        return saved as LanguageCode;
+      }
+    }
+    return DEFAULT_PATIENT_LANGUAGE;
+  });
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -104,6 +113,11 @@ export function ChatInterface() {
       abortControllerRef.current?.abort();
     };
   }, []);
+
+  // Persist patient language to localStorage
+  useEffect(() => {
+    localStorage.setItem('patientLanguage', patientLanguage);
+  }, [patientLanguage]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -473,7 +487,7 @@ export function ChatInterface() {
               onScrollCapture={handleScroll}
               ref={scrollAreaRef}
             >
-              <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex flex-col gap-3 sm:gap-4 pt-2">
                 {filteredMessages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {searchQuery ? (

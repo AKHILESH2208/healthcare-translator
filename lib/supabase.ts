@@ -19,7 +19,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   realtime: {
     params: {
-      eventsPerSecond: 10, // Limit real-time events for better performance
+      eventsPerSecond: 20, // Allow more real-time events
+    },
+  },
+  global: {
+    headers: {
+      'x-client-info': 'healthcare-translator',
     },
   },
 });

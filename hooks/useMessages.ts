@@ -69,6 +69,16 @@ export function useMessages() {
 
       if (insertError) throw insertError;
 
+      // Optimistically add the message locally for immediate feedback
+      // Real-time subscription will also receive it, but we handle duplicates
+      if (data) {
+        setMessages((prev) => {
+          const exists = prev.some(msg => msg.id === data.id);
+          if (exists) return prev;
+          return [...prev, data];
+        });
+      }
+
       return data;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add message';
@@ -175,31 +185,57 @@ export function useMessages() {
   useEffect(() => {
     fetchMessages();
 
-    const subscription = supabase
-      .channel('messages_channel')
+    const channel = supabase
+      .channel('messages_realtime')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'messages',
         },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setMessages((prev) => [...prev, payload.new as Message]);
-          } else if (payload.eventType === 'DELETE') {
-            setMessages((prev) => prev.filter((msg) => msg.id !== payload.old.id));
-          } else if (payload.eventType === 'UPDATE') {
-            setMessages((prev) =>
-              prev.map((msg) => (msg.id === payload.new.id ? payload.new as Message : msg))
-            );
-          }
+          console.log('Real-time INSERT:', payload);
+          setMessages((prev) => {
+            // Avoid duplicates - check if message already exists
+            const exists = prev.some(msg => msg.id === payload.new.id);
+            if (exists) return prev;
+            return [...prev, payload.new as Message];
+          });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('Real-time DELETE:', payload);
+          setMessages((prev) => prev.filter((msg) => msg.id !== payload.old.id));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('Real-time UPDATE:', payload);
+          setMessages((prev) =>
+            prev.map((msg) => (msg.id === payload.new.id ? payload.new as Message : msg))
+          );
+        }
+      )
+      .subscribe((status) => {
+        console.log('Supabase realtime subscription status:', status);
+      });
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [fetchMessages]);
 
