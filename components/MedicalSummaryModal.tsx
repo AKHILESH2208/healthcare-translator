@@ -63,8 +63,8 @@ ${summary.followUpActions.length > 0 ? summary.followUpActions.map(a => `• ${a
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3">
+      <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col">
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-3 flex-shrink-0">
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Medical Summary
@@ -76,15 +76,15 @@ ${summary.followUpActions.length > 0 ? summary.followUpActions.map(a => `• ${a
 
         <Separator />
 
-        <CardContent className="flex-1 overflow-hidden pt-4">
+        <CardContent className="flex-1 overflow-hidden pt-4 min-h-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="ml-2 text-muted-foreground">Generating summary...</p>
             </div>
           ) : summary ? (
-            <ScrollArea className="h-full pr-4">
-              <div className="space-y-6">
+            <ScrollArea className="h-[calc(85vh-180px)] pr-4">
+              <div className="space-y-6 pb-4">
                 {/* Summary Metadata */}
                 <div className="text-sm text-muted-foreground">
                   <p>Generated: {new Date(summary.timestamp).toLocaleString()}</p>

@@ -57,36 +57,60 @@ ${context ? `\nContext: ${context}` : ''}`;
   }
 }
 
+// Language name mapping for better prompts
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  es: 'Spanish',
+  hi: 'Hindi',
+  fr: 'French',
+  de: 'German',
+  pt: 'Portuguese',
+  zh: 'Chinese',
+  ar: 'Arabic',
+};
+
 // Helper function to generate medical summary using Groq
 export async function generateMedicalSummary(
-  messages: Message[]
+  messages: Message[],
+  outputLanguage: string = 'en'
 ): Promise<MedicalSummary> {
   try {
-    // Format conversation for analysis
+    // Format conversation for analysis - use English content for analysis
     const conversation = messages
-      .map(m => `${m.sender_role}: ${m.original_content || m.translated_content}`)
-      .join('\n');
+      .map(m => {
+        // Use translated content for patient (which is English), original for doctor
+        const content = m.sender_role === 'patient' 
+          ? (m.translated_content || m.original_content) 
+          : m.original_content;
+        return `${m.sender_role}: ${content}`;
+      })
+      .join('\\n');
 
+    const languageName = LANGUAGE_NAMES[outputLanguage] || 'English';
+    
     const systemPrompt = `You are a medical AI assistant. Analyze this doctor-patient conversation and extract:
 
 1. **Symptoms**: List all symptoms mentioned by the patient
 2. **Medications**: List any medications discussed (prescribed, current, or allergies)
 3. **Follow-up Actions**: List recommended tests, appointments, or instructions
 
+IMPORTANT: Your response MUST be in ${languageName} language.
+
 Return your response in this EXACT JSON format:
 {
-  "symptoms": ["symptom1", "symptom2"],
-  "medications": ["medication1", "medication2"],
-  "followUpActions": ["action1", "action2"]
+  "symptoms": ["symptom1 in ${languageName}", "symptom2 in ${languageName}"],
+  "medications": ["medication1 in ${languageName}", "medication2 in ${languageName}"],
+  "followUpActions": ["action1 in ${languageName}", "action2 in ${languageName}"]
 }
 
-Only include information explicitly mentioned in the conversation. If a category has no information, use an empty array.`;
+Only include information explicitly mentioned in the conversation. If a category has no information, use an empty array.
+Remember: ALL text in the arrays must be in ${languageName}.`;
 
     const completion = await groq.chat.completions.create({
       model: MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Conversation:\n${conversation}` }
+        { role: 'user', content: `Conversation:\\n${conversation}` }
       ],
       temperature: 0.2,
       max_tokens: 1024,

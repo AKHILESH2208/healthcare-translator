@@ -334,7 +334,11 @@ export function ChatInterface() {
       const response = await fetch('/api/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: recentMessages }),
+        body: JSON.stringify({ 
+          messages: recentMessages,
+          viewerRole: currentRole,
+          patientLanguage: patientLanguage,
+        }),
       });
 
       if (!response.ok) throw new Error('Summary generation failed');
@@ -487,7 +491,7 @@ export function ChatInterface() {
               onScrollCapture={handleScroll}
               ref={scrollAreaRef}
             >
-              <div className="flex flex-col gap-3 sm:gap-4 pt-2">
+              <div className="flex flex-col gap-3 sm:gap-4 pt-6">
                 {filteredMessages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {searchQuery ? (

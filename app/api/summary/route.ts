@@ -5,7 +5,7 @@ import { Message, SenderRole, LanguageCode } from '@/types';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messages } = body;
+    const { messages, viewerRole = 'doctor', patientLanguage = 'en' } = body;
 
     // Validation
     if (!messages || !Array.isArray(messages)) {
@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Determine output language: Doctor gets English, Patient gets their language
+    const outputLanguage = viewerRole === 'doctor' ? 'en' : patientLanguage;
 
     // Format messages for Groq
     const formattedMessages: Message[] = messages.map((msg: {
@@ -42,8 +45,8 @@ export async function POST(request: NextRequest) {
       created_at: msg.created_at || new Date().toISOString(),
     }));
 
-    // Generate summary using Groq
-    const summary = await generateMedicalSummary(formattedMessages);
+    // Generate summary using Groq with the appropriate output language
+    const summary = await generateMedicalSummary(formattedMessages, outputLanguage);
 
     return NextResponse.json({
       summary,
