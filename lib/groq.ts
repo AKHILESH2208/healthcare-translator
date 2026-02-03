@@ -84,7 +84,7 @@ export async function generateMedicalSummary(
           : m.original_content;
         return `${m.sender_role}: ${content}`;
       })
-      .join('\\n');
+      .join('\n');
 
     const languageName = LANGUAGE_NAMES[outputLanguage] || 'English';
     
@@ -94,23 +94,23 @@ export async function generateMedicalSummary(
 2. **Medications**: List any medications discussed (prescribed, current, or allergies)
 3. **Follow-up Actions**: List recommended tests, appointments, or instructions
 
-IMPORTANT: Your response MUST be in ${languageName} language.
+CRITICAL INSTRUCTION: Your ENTIRE response MUST be written in ${languageName} language only. Every single word in the arrays must be in ${languageName}.
 
 Return your response in this EXACT JSON format:
 {
-  "symptoms": ["symptom1 in ${languageName}", "symptom2 in ${languageName}"],
-  "medications": ["medication1 in ${languageName}", "medication2 in ${languageName}"],
-  "followUpActions": ["action1 in ${languageName}", "action2 in ${languageName}"]
+  "symptoms": ["symptom1", "symptom2"],
+  "medications": ["medication1", "medication2"],
+  "followUpActions": ["action1", "action2"]
 }
 
 Only include information explicitly mentioned in the conversation. If a category has no information, use an empty array.
-Remember: ALL text in the arrays must be in ${languageName}.`;
+REMINDER: Write ALL content in ${languageName} language.`;
 
     const completion = await groq.chat.completions.create({
       model: MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Conversation:\\n${conversation}` }
+        { role: 'user', content: `Analyze this conversation and respond in ${languageName}:\n${conversation}` }
       ],
       temperature: 0.2,
       max_tokens: 1024,

@@ -487,11 +487,11 @@ export function ChatInterface() {
             </div>
           ) : (
             <ScrollArea 
-              className="h-[calc(100vh-380px)] sm:h-[calc(100vh-350px)] p-3 sm:p-4"
+              className="h-[calc(100vh-380px)] sm:h-[calc(100vh-350px)]"
               onScrollCapture={handleScroll}
               ref={scrollAreaRef}
             >
-              <div className="flex flex-col gap-3 sm:gap-4 pt-12">
+              <div className="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 pt-16">
                 {filteredMessages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {searchQuery ? (
