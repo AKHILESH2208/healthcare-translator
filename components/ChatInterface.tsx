@@ -474,25 +474,11 @@ export function ChatInterface({ userRole, userName, onLogout, onOpenAIAssistant 
             </div>
             
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              {/* Role Toggle - Only show if user is doctor (doctors can switch perspective) */}
+              {/* Current Role Badge for Doctor */}
               {userRole === 'doctor' && (
-                <div className="flex items-center gap-2 bg-muted p-1 rounded-lg w-full sm:w-auto">
-                  <Toggle
-                    pressed={currentRole === 'doctor'}
-                    onPressedChange={() => handleRoleToggle('doctor')}
-                    className="flex-1 sm:flex-none data-[state=on]:bg-blue-500 data-[state=on]:text-white"
-                  >
-                    <Stethoscope className="h-4 w-4 mr-2" />
-                    Doctor
-                  </Toggle>
-                  <Toggle
-                    pressed={currentRole === 'patient'}
-                    onPressedChange={() => handleRoleToggle('patient')}
-                    className="flex-1 sm:flex-none data-[state=on]:bg-green-500 data-[state=on]:text-white"
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Patient
-                  </Toggle>
+                <div className="flex items-center gap-2 bg-blue-100 dark:bg-blue-900 px-3 py-1.5 rounded-lg">
+                  <Stethoscope className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Doctor Mode</span>
                 </div>
               )}
 
@@ -568,7 +554,7 @@ export function ChatInterface({ userRole, userName, onLogout, onOpenAIAssistant 
               onScrollCapture={handleScroll}
               ref={scrollAreaRef}
             >
-              <div className="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 pt-16">
+              <div className="flex flex-col gap-3 sm:gap-4 p-3 sm:p-4 pt-28">
                 {filteredMessages.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {searchQuery ? (
