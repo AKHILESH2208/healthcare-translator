@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
-import { SenderRole, LanguageCode, MedicalSummary } from '@/types';
+import { SenderRole, LanguageCode, MedicalSummary, Message } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Toggle } from '@/components/ui/toggle';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,11 +32,20 @@ import {
   ChevronDown,
   Wifi,
   WifiOff,
-  History
+  History,
+  Bot,
+  LogOut
 } from 'lucide-react';
 
-export function ChatInterface() {
-  const [currentRole, setCurrentRole] = useState<SenderRole>('doctor');
+interface ChatInterfaceProps {
+  userRole: SenderRole;
+  userName: string;
+  onLogout: () => void;
+  onOpenAIAssistant?: (messages: Message[], language: LanguageCode) => void;
+}
+
+export function ChatInterface({ userRole, userName, onLogout, onOpenAIAssistant }: ChatInterfaceProps) {
+  const [currentRole, setCurrentRole] = useState<SenderRole>(userRole);
   const [patientLanguage, setPatientLanguage] = useState<LanguageCode>(() => {
     // Load saved language from localStorage on mount
     if (typeof window !== 'undefined') {
@@ -61,6 +71,12 @@ export function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const summaryCacheRef = useRef<{
+    summary: MedicalSummary;
+    messageCount: number;
+    language: LanguageCode;
+    role: SenderRole;
+  } | null>(null);
   const [isOnline, setIsOnline] = useState(true);
   
   const { messages, isLoading, error, addMessage, getRecentMessages, clearMessages } = useMessages();
@@ -173,6 +189,9 @@ export function ChatInterface() {
         label: 'Clear',
         onClick: async () => {
           await clearMessages();
+          // Invalidate summary cache
+          summaryCacheRef.current = null;
+          setMedicalSummary(null);
           toast.success('Messages cleared');
         },
       },
@@ -320,6 +339,20 @@ export function ChatInterface() {
       return;
     }
     
+    // Check if we have a valid cached summary
+    const cache = summaryCacheRef.current;
+    if (cache && 
+        cache.messageCount === messages.length && 
+        cache.language === patientLanguage &&
+        cache.role === currentRole &&
+        messages.length > 0) {
+      // Use cached summary
+      setMedicalSummary(cache.summary);
+      setShowSummaryModal(true);
+      toast.success('Summary loaded from cache');
+      return;
+    }
+
     setIsGeneratingSummary(true);
     setShowSummaryModal(true);
     setMedicalSummary(null);
@@ -345,6 +378,15 @@ export function ChatInterface() {
 
       const data = await response.json();
       setMedicalSummary(data.summary);
+      
+      // Cache the summary
+      summaryCacheRef.current = {
+        summary: data.summary,
+        messageCount: messages.length,
+        language: patientLanguage,
+        role: currentRole,
+      };
+      
       toast.success('Summary generated');
     } catch (err) {
       console.error('Failed to generate summary:', err);
@@ -359,7 +401,7 @@ export function ChatInterface() {
     } finally {
       setIsGeneratingSummary(false);
     }
-  }, [isOnline, getRecentMessages]);
+  }, [isOnline, getRecentMessages, messages.length, patientLanguage, currentRole]);
 
   const formatDuration = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -382,53 +424,88 @@ export function ChatInterface() {
         <CardHeader className="pb-3 px-3 sm:px-6">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-lg sm:text-xl md:text-2xl bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent font-bold">
-                  Nao Medical Translator
-                </CardTitle>
-                {isOnline ? (
-                  <Wifi className="h-4 w-4 text-green-500" />
-                ) : (
-                  <WifiOff className="h-4 w-4 text-destructive" />
-                )}
+              <div className="flex items-center gap-3">
+                {/* NAO Medical Logo */}
+                <Image
+                  src="https://naomedical.com/main-page-assets/images/about-us/banner-logo.svg"
+                  alt="NAO Medical"
+                  width={120}
+                  height={32}
+                  className="h-8 sm:h-9 w-auto"
+                  priority
+                />
+                <div className="border-l pl-3">
+                  <p className="text-xs text-muted-foreground">Healthcare Translator</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    Welcome, <span className="font-medium">{userName}</span>
+                    {isOnline ? (
+                      <Wifi className="h-3 w-3 text-green-500 ml-1" />
+                    ) : (
+                      <WifiOff className="h-3 w-3 text-destructive ml-1" />
+                    )}
+                  </p>
+                </div>
               </div>
               
-              {/* Clear chat button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClearChat}
-                disabled={messages.length === 0}
-                className="text-muted-foreground hover:text-destructive"
-                title="Clear all messages"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Logout button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Logout"
+                >
+                  <LogOut className="h-4 w-4 mr-1" />
+                  <span className="hidden sm:inline">Logout</span>
+                </Button>
+                {/* Clear chat button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearChat}
+                  disabled={messages.length === 0}
+                  className="text-muted-foreground hover:text-destructive"
+                  title="Clear all messages"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              {/* Role Toggle */}
-              <div className="flex items-center gap-2 bg-muted p-1 rounded-lg w-full sm:w-auto">
-                <Toggle
-                  pressed={currentRole === 'doctor'}
-                  onPressedChange={() => handleRoleToggle('doctor')}
-                  className="flex-1 sm:flex-none data-[state=on]:bg-blue-500 data-[state=on]:text-white"
-                >
-                  <Stethoscope className="h-4 w-4 mr-2" />
-                  Doctor
-                </Toggle>
-                <Toggle
-                  pressed={currentRole === 'patient'}
-                  onPressedChange={() => handleRoleToggle('patient')}
-                  className="flex-1 sm:flex-none data-[state=on]:bg-green-500 data-[state=on]:text-white"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Patient
-                </Toggle>
-              </div>
+              {/* Role Toggle - Only show if user is doctor (doctors can switch perspective) */}
+              {userRole === 'doctor' && (
+                <div className="flex items-center gap-2 bg-muted p-1 rounded-lg w-full sm:w-auto">
+                  <Toggle
+                    pressed={currentRole === 'doctor'}
+                    onPressedChange={() => handleRoleToggle('doctor')}
+                    className="flex-1 sm:flex-none data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+                  >
+                    <Stethoscope className="h-4 w-4 mr-2" />
+                    Doctor
+                  </Toggle>
+                  <Toggle
+                    pressed={currentRole === 'patient'}
+                    onPressedChange={() => handleRoleToggle('patient')}
+                    className="flex-1 sm:flex-none data-[state=on]:bg-green-500 data-[state=on]:text-white"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Patient
+                  </Toggle>
+                </div>
+              )}
 
-              {/* Language Selector (shown only for patient) */}
-              {currentRole === 'patient' && (
+              {/* Current Role Badge for Patients */}
+              {userRole === 'patient' && (
+                <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900 px-3 py-1.5 rounded-lg">
+                  <User className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Patient Mode</span>
+                </div>
+              )}
+
+              {/* Language Selector (shown only for patient role or when user is patient) */}
+              {(currentRole === 'patient' || userRole === 'patient') && (
                 <select
                   value={patientLanguage}
                   onChange={(e) => setPatientLanguage(e.target.value as LanguageCode)}
@@ -664,6 +741,19 @@ export function ChatInterface() {
               {isGeneratingSummary ? 'Generating...' : 'Summary'}
             </Button>
           </div>
+
+          {/* AI Assistant Button - Only for Patients */}
+          {userRole === 'patient' && messages.length > 0 && onOpenAIAssistant && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => onOpenAIAssistant(messages, patientLanguage)}
+              className="w-full mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              <Bot className="h-4 w-4 mr-2" />
+              Ask AI Assistant Follow-up Questions
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -706,11 +796,16 @@ export function ChatInterface() {
       <footer className="mt-2 py-2 text-center text-xs text-muted-foreground border-t">
         <div className="flex items-center justify-center gap-2 flex-wrap">
           <span>
-            Viewing as: <span className={`font-semibold ${currentRole === 'doctor' ? 'text-blue-600' : 'text-green-600'}`}>
-              {currentRole === 'doctor' ? '👨‍⚕️ Doctor' : '🧑 Patient'}
+            Logged in as: <span className={`font-semibold ${userRole === 'doctor' ? 'text-blue-600' : 'text-green-600'}`}>
+              {userRole === 'doctor' ? '👨‍⚕️ ' : '🧑 '}{userName}
             </span>
           </span>
-          {currentRole === 'patient' && (
+          {userRole === 'doctor' && currentRole !== userRole && (
+            <span className="border-l pl-2">
+              Viewing as: <span className="font-semibold text-green-600">Patient</span>
+            </span>
+          )}
+          {(currentRole === 'patient' || userRole === 'patient') && (
             <span className="border-l pl-2">
               Language: <span className="font-semibold">
                 {SUPPORTED_LANGUAGES.find(l => l.code === patientLanguage)?.nativeName}
@@ -721,8 +816,16 @@ export function ChatInterface() {
             <span className="border-l pl-2 opacity-70">{messages.length} messages</span>
           )}
         </div>
-        <div className="mt-1 opacity-50">
-          Powered by Nao Medical • AI Translation
+        <div className="mt-1 opacity-50 flex items-center justify-center gap-2">
+          <span>Powered by</span>
+          <Image
+            src="https://naomedical.com/main-page-assets/images/about-us/banner-logo.svg"
+            alt="NAO Medical"
+            width={80}
+            height={20}
+            className="h-4 w-auto inline-block"
+          />
+          <span>• AI Translation</span>
         </div>
       </footer>
     </div>

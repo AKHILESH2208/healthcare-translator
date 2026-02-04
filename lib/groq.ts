@@ -138,3 +138,39 @@ REMINDER: Write ALL content in ${languageName} language.`;
     throw error;
   }
 }
+
+// Helper function for AI Assistant chat
+export async function chatWithAIAssistant(
+  userMessage: string,
+  systemPrompt: string,
+  targetLanguage: string = 'en'
+): Promise<string> {
+  try {
+    const languageName = LANGUAGE_NAMES[targetLanguage] || 'English';
+    
+    const enhancedSystemPrompt = `${systemPrompt}
+
+IMPORTANT: You MUST respond ONLY in ${languageName} language. Do not use any other language.`;
+
+    const completion = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [
+        { role: 'system', content: enhancedSystemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      temperature: 0.7,
+      max_tokens: 1024,
+    });
+
+    const response = completion.choices[0]?.message?.content?.trim();
+    
+    if (!response) {
+      throw new Error('No response received from Groq API');
+    }
+
+    return response;
+  } catch (error) {
+    console.error('AI Assistant error:', error);
+    throw error;
+  }
+}

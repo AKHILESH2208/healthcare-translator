@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { translateText } from '@/lib/groq';
+import { translateText, chatWithAIAssistant } from '@/lib/groq';
 import { SUPPORTED_LANGUAGES } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { text, sourceLanguage, targetLanguage } = body;
+    const { text, sourceLanguage, targetLanguage, isAIAssistant, systemPrompt } = body;
 
     // Validation
     if (!text || typeof text !== 'string') {
@@ -13,6 +13,19 @@ export async function POST(request: NextRequest) {
         { error: 'Text is required and must be a string' },
         { status: 400 }
       );
+    }
+
+    // Handle AI Assistant requests
+    if (isAIAssistant && systemPrompt) {
+      const response = await chatWithAIAssistant(text, systemPrompt, targetLanguage);
+      return NextResponse.json({
+        originalText: text,
+        translatedText: response,
+        sourceLanguage,
+        targetLanguage,
+        model: 'llama-3.3-70b',
+        type: 'ai_assistant',
+      });
     }
 
     if (!sourceLanguage || !targetLanguage) {
